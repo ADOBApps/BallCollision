@@ -9,6 +9,8 @@ from tkinter import messagebox as mb
 import tkinter.ttk as ttk
 
 from emulator.onemotion import OneMotion
+from emulator.mysprites.ball import Ball
+from mycontrollers.io.inputverify import InputVerify
 
 
 class Windows:
@@ -22,6 +24,15 @@ class Windows:
         print(class_name, "Started")
         # Tk object instance
         self.master = master
+
+        # Text Verifier
+        self.verify = InputVerify()
+
+        # Collision info
+        self.collision_info = {
+            'screen_width': 0,
+            'screen_height': 0
+        }
 
         # Screen's size
         self.s_width = master.winfo_screenwidth()
@@ -45,6 +56,9 @@ class Windows:
         self.labelvar3.set('Common text')
         self.labelvar4 = tk.StringVar()
         self.labelvar4.set('Common text')
+
+        self.type_list = ['Simple', 'Multiple']
+
         # self.Ballconfig()
         self.notebook.pack()
 
@@ -53,36 +67,56 @@ class Windows:
         print(class_name, "Destroyed")
 
     def Ballconfig(self):
+        '''
+        Define screen size and other collision details
+        '''
         self.frame1 = ttk.Frame(self.notebook)
         self.frame1.pack(fill=tk.BOTH, expand=True)
-        self.notebook.add(self.frame1, text='Ball Settings')
+        self.notebook.add(self.frame1, text='General Settings')
 
         # LabelFrame1: Window
         self.labelframe1 = ttk.LabelFrame(self.frame1, text='Window')
         self.labelframe1.pack(fill=tk.BOTH, padx=5, pady=10, expand=False)
         # Width
         label1 = ttk.Label(self.labelframe1, textvariable=self.labelvar1)
-        self.labelvar1.set(f'Ancho ventana max={self.s_width}')
+        self.labelvar1.set(f'Window width max={self.s_width}')
         label1.pack(pady=50, padx=20, side='left')
         self.entry_w_width = ttk.Entry(self.labelframe1, justify=tk.LEFT)
         self.entry_w_width.pack(pady=50, padx=20, side='left')
         # Height
         label2 = ttk.Label(self.labelframe1, textvariable=self.labelvar2)
-        self.labelvar2.set(f'Alto ventana max={self.s_height}')
+        self.labelvar2.set(f'Window height max={self.s_height}')
         label2.pack(pady=50, padx=20, side='left')
         self.entry_w_height = ttk.Entry(self.labelframe1, justify=tk.LEFT)
         self.entry_w_height.pack(pady=50, padx=20, side='left')
         # Button
-        self.button1 = Button(
+        self.button_screen = Button(
             self.labelframe1,
-            text='Guardar',
+            text='Save',
             command=self.setWin
         )
-        self.button1.pack(padx=5, pady=5, side='left')
+        self.button_screen.pack(padx=5, pady=5, side='left')
 
-        # LabelFrame1: Window
-        self.labelframe2 = ttk.LabelFrame(self.frame1, text='Ball')
-        self.labelframe2.pack(fill=tk.BOTH, padx=5, pady=10, expand=True)
+        # LabelFrame2: Ball
+        self.labelframe2 = ttk.LabelFrame(self.frame1, text='Collision type')
+        self.labelframe2.pack(fill=tk.BOTH, padx=5, pady=10, expand=False)
+        # Collision type select
+        self.coll_type = ttk.Combobox(self.labelframe2, values=self.type_list)
+        self.coll_type.set('Select an option')
+        self.coll_type.pack(padx=5, pady=5, side='left')
+        # Button
+        self.button_type = Button(
+            self.labelframe2,
+            text='Ok',
+            command=self.setType
+        )
+        self.button_type.pack(padx=5, pady=5, side='left')
+        self.button_type.config(state=tk.DISABLED)
+
+        # Frame2: sheet2
+        self.frame2 = ttk.Frame(self.notebook)
+        self.frame2.pack(fill=tk.BOTH, expand=True)
+        self.notebook.add(self.frame2, text='Collision Settings')
 
         # Select Sheet as main
         self.notebook.select(self.frame1)
@@ -91,9 +125,39 @@ class Windows:
         width = self.entry_w_width.get()
         height = self.entry_w_height.get()
         if width != '' and height != '':
-            mb.showinfo('Info', 'Valores cargados')
-            # om = OneMotion(800, 500)
-            om = OneMotion(int(width), int(height))
-            om.main()
+            if self.verify.Integer(height) and self.verify.Integer(width):
+                my_height = int(height)
+                my_width = int(width)
+
+                if my_height < self.s_height and my_width < self.s_width:
+                    mb.showinfo('Info', 'Saved')
+
+                    # Save info
+                    self.collision_info['screen_width'] = my_width
+                    self.collision_info['screen_height'] = my_height
+
+                    # Entry and button disabled
+                    self.entry_w_height.config(state=tk.DISABLED)
+                    self.entry_w_width.config(state=tk.DISABLED)
+                    self.button_screen.config(state=tk.DISABLED)
+                    self.button_type.config(state=tk.NORMAL)
+
+                else:
+                    mb.showerror(
+                        'Error',
+                        'Values close to screen dimension'
+                    )
+            else:
+                mb.showerror('Error', 'Only integer values are allowed')
         else:
-            mb.showerror('Error', 'Ambos valores son requeridos')
+            mb.showerror('Error', 'All values are required')
+
+    def setType(self):
+        if self.coll_type.get() == 'Simple':
+            om = OneMotion(
+                self.collision_info['screen_width'],
+                self.collision_info['screen_height']
+            )
+            om.main()
+        if self.coll_type.get() == 'Multiple':
+            mb.showinfo('Info', 'Multiple selected')
